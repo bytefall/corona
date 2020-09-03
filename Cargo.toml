@@ -1,0 +1,20 @@
+[package]
+name = "corona"
+version = "0.1.0"
+authors = ["Oleg Scherbakov <scherbakov.oleg@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+#clap = "2.33"
+dirs = "2.0"
+toml = "0.5"
+serde = "1.0"
+serde_derive = "1.0"
+zip = "0.5"
+podio = "0.1"
+chrono = "0.4"
+encoding = "0.2"
+
+[dependencies.rusqlite]
+version = "0.21"
+features = ["chrono", "functions", "bundled"]
