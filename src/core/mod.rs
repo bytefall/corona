@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::str::FromStr;
+use std::num::{ParseIntError, IntErrorKind};
 use chrono::{NaiveDate, NaiveDateTime};
 use encoding::{all::IBM866, DecoderTrap, Encoding};
 
@@ -77,9 +78,9 @@ impl FromStr for Address {
 
 		use Tag::*;
 
-		let map_parse_int_err = |err: std::num::ParseIntError|
+		let map_parse_int_err = |err: ParseIntError|
 			match err.kind() {
-				std::num::IntErrorKind::Overflow => Self::Err::Overflow,
+				IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => Self::Err::Overflow,
 				_ => Self::Err::InvalidFormat,
 			};
 
@@ -628,9 +629,9 @@ impl std::fmt::Display for NetNodePairError {
 }
 
 fn parse_net_node_pairs(s: &str) -> Result<Vec<NetNodePair>, NetNodePairError> {
-	let map_parse_int_err = |err: std::num::ParseIntError|
+	let map_parse_int_err = |err: ParseIntError|
 		match err.kind() {
-			std::num::IntErrorKind::Overflow => NetNodePairError::Overflow,
+			IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => NetNodePairError::Overflow,
 			_ => NetNodePairError::InvalidFormat,
 		};
 

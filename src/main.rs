@@ -1,6 +1,3 @@
-#![feature(int_error_matching)]
-#![feature(or_patterns)]
-
 #[macro_use]
 extern crate serde_derive;
 
