@@ -13,8 +13,9 @@ Corona is an echomail processor / netmail tracker for FidoNet Technology Network
 
 1. Rust
 	- Install [Rust](https://www.rust-lang.org/tools/install).
-	- Install nightly toolchain: `rustup toolchain install nightly`
 
 ### Compile
 
-Execute `cargo +nightly build` to compile in *debug* mode or `cargo +nightly build --release` for *release* mode.
+Execute
+	- `cargo build` to compile in *debug* mode or
+	- `cargo build --release` for *release* mode.
