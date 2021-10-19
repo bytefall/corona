@@ -9,7 +9,7 @@ macro_rules! select_or_insert {
 			Ok(v) => Ok(v),
 			Err(e) => Err(e),
 		}
-	}}
+	}};
 }
 
 macro_rules! select_or_insert_v2 {
@@ -23,5 +23,5 @@ macro_rules! select_or_insert_v2 {
 			Ok(v) => Ok(v),
 			Err(e) => Err(e),
 		}
-	}}
+	}};
 }

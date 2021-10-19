@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {

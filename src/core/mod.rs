@@ -1,8 +1,8 @@
-use std::error::Error;
-use std::str::FromStr;
-use std::num::{ParseIntError, IntErrorKind};
 use chrono::{NaiveDate, NaiveDateTime};
 use encoding::{all::IBM866, DecoderTrap, Encoding};
+use std::error::Error;
+use std::num::{IntErrorKind, ParseIntError};
+use std::str::FromStr;
 
 /// Fidonet address according to FRL-1002
 #[derive(Eq, PartialEq, Debug)]
@@ -59,7 +59,8 @@ impl std::fmt::Display for ParseAddressError {
 		match self {
 			Self::InvalidFormat => "Format is not valid. It should be either 3D, 4D or 5D.",
 			Self::Overflow => "Number is too large to fit in target type.",
-		}.fmt(f)
+		}
+		.fmt(f)
 	}
 }
 
@@ -78,11 +79,10 @@ impl FromStr for Address {
 
 		use Tag::*;
 
-		let map_parse_int_err = |err: ParseIntError|
-			match err.kind() {
-				IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => Self::Err::Overflow,
-				_ => Self::Err::InvalidFormat,
-			};
+		let map_parse_int_err = |err: ParseIntError| match err.kind() {
+			IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => Self::Err::Overflow,
+			_ => Self::Err::InvalidFormat,
+		};
 
 		let mut a = Self::empty();
 		let mut tag = Zone;
@@ -242,17 +242,17 @@ pub fn messages_from(pkg: crate::ftn::Package) -> Result<Vec<Message>, Box<dyn E
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 enum Token {
-	Area,					// AREA:
-	MsgId,					// MSGID:
-	Reply,					// REPLY:
-	Pid,					// PID:
-	Tid,					// TID:
-	TzUtc,					// TZUTC:
-	TearLine(usize),		// ---
-	Origin(usize),			// * Origin:
-	SeenBy(usize),			// SEEN-BY:
-	Path,					// PATH:
-	Kludge,					// unknown kludge
+	Area,            // AREA:
+	MsgId,           // MSGID:
+	Reply,           // REPLY:
+	Pid,             // PID:
+	Tid,             // TID:
+	TzUtc,           // TZUTC:
+	TearLine(usize), // ---
+	Origin(usize),   // * Origin:
+	SeenBy(usize),   // SEEN-BY:
+	Path,            // PATH:
+	Kludge,          // unknown kludge
 	Paragraph,
 }
 
@@ -339,7 +339,11 @@ fn tokenize_msg_body<'a>(text: &'a str) -> Result<Vec<TokenPair<'a>>, Box<dyn Er
 	let mut has_origin = false;
 
 	// origins or SEEN-BYs prior the last origin are treated as a normal text
-	for (t, _) in tokens.iter_mut().rev().filter(|(t, _)| matches!(t, Token::TearLine(_) | Token::Origin(_) | Token::SeenBy(_))) {
+	for (t, _) in tokens
+		.iter_mut()
+		.rev()
+		.filter(|(t, _)| matches!(t, Token::TearLine(_) | Token::Origin(_) | Token::SeenBy(_)))
+	{
 		match t {
 			Token::TearLine(_) if has_origin && has_tear_line => {
 				*t = Token::Paragraph;
@@ -423,18 +427,14 @@ fn parse_tokens(tokens: &[TokenPair], msg: &mut Message) -> Result<(), Box<dyn E
 			Token::Origin(skip) => {
 				msg.origin.push_str(&s[*skip..]);
 			}
-			Token::SeenBy(skip) => {
-				match &mut parse_net_node_pairs(s[*skip..].trim()) {
-					Ok(v) => msg.kludges.seen_by.get_or_insert(Vec::new()).append(v),
-					Err(_) => eprintln!("SEEN-BY parse fail: {}", s),
-				}
-			}
-			Token::Path => {
-				match &mut parse_net_node_pairs(s.trim()) {
-					Ok(v) => msg.kludges.path.get_or_insert(Vec::new()).append(v),
-					Err(_) => eprintln!("PATH parse fail: {}", s),
-				}
-			}
+			Token::SeenBy(skip) => match &mut parse_net_node_pairs(s[*skip..].trim()) {
+				Ok(v) => msg.kludges.seen_by.get_or_insert(Vec::new()).append(v),
+				Err(_) => eprintln!("SEEN-BY parse fail: {}", s),
+			},
+			Token::Path => match &mut parse_net_node_pairs(s.trim()) {
+				Ok(v) => msg.kludges.path.get_or_insert(Vec::new()).append(v),
+				Err(_) => eprintln!("PATH parse fail: {}", s),
+			},
 			Token::Kludge => {
 				if s.starts_with(REPLYADDR) {
 					msg.from.ext_addr = Some(s[REPLYADDR.len()..].to_string());
@@ -580,7 +580,8 @@ impl std::fmt::Display for ParseMessageIdError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::InvalidFormat => "Format is not valid. It should be `origaddr serialno`.",
-		}.fmt(f)
+		}
+		.fmt(f)
 	}
 }
 
@@ -604,9 +605,7 @@ impl std::str::FromStr for MessageId {
 					MessageId::ext(addr.to_string(), sl)
 				});
 			}
-			_ => {
-				Err(Self::Err::InvalidFormat)
-			}
+			_ => Err(Self::Err::InvalidFormat),
 		}
 	}
 }
@@ -622,18 +621,20 @@ pub enum NetNodePairError {
 impl std::fmt::Display for NetNodePairError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::InvalidFormat => "Format is not valid. It should be either a `node` or a pair `net/node` separated by a space.",
+			Self::InvalidFormat => {
+				"Format is not valid. It should be either a `node` or a pair `net/node` separated by a space."
+			}
 			Self::Overflow => "Number is too large to fit in target type.",
-		}.fmt(f)
+		}
+		.fmt(f)
 	}
 }
 
 fn parse_net_node_pairs(s: &str) -> Result<Vec<NetNodePair>, NetNodePairError> {
-	let map_parse_int_err = |err: ParseIntError|
-		match err.kind() {
-			IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => NetNodePairError::Overflow,
-			_ => NetNodePairError::InvalidFormat,
-		};
+	let map_parse_int_err = |err: ParseIntError| match err.kind() {
+		IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => NetNodePairError::Overflow,
+		_ => NetNodePairError::InvalidFormat,
+	};
 
 	let mut pairs = Vec::new();
 
@@ -665,12 +666,9 @@ fn parse_replyto(s: &str) -> Result<(Address, &str), ParseAddressError> {
 	let mut i = s.rsplit(' ');
 
 	match (i.next(), i.next()) {
-		(Some(name), Some(addr)) =>
-			Ok((Address::from_str(addr)?, name)),
-		(Some(addr), None) =>
-			Ok((Address::from_str(addr)?, "")),
-		_ =>
-			Err(ParseAddressError::InvalidFormat),
+		(Some(name), Some(addr)) => Ok((Address::from_str(addr)?, name)),
+		(Some(addr), None) => Ok((Address::from_str(addr)?, "")),
+		_ => Err(ParseAddressError::InvalidFormat),
 	}
 }
 
@@ -691,7 +689,9 @@ impl DateTimeError {
 	}
 }
 
-const FTN_MONTHS: &[&str] = &["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const FTN_MONTHS: &[&str] = &[
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 	if s.len() != 19 {
@@ -700,11 +700,27 @@ fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 
 	let map_parse_int_err = |_| DateTimeError::InvalidFormat;
 
-	match (&s[..2], &s[2..3], &s[3..6], &s[6..7], &s[7..9], &s[9..11], &s[11..13], &s[13..14], &s[14..16], &s[16..17], &s[17..]) {
+	match (
+		&s[..2],
+		&s[2..3],
+		&s[3..6],
+		&s[6..7],
+		&s[7..9],
+		&s[9..11],
+		&s[11..13],
+		&s[13..14],
+		&s[14..16],
+		&s[16..17],
+		&s[17..],
+	) {
 		(day, " ", month, " ", year, "  ", hh, ":", mm, ":", ss) => {
 			let (day, month, mut year) = (
 				day.trim().parse().map_err(map_parse_int_err)?,
-				FTN_MONTHS.iter().position(|&x| x == month).ok_or(DateTimeError::InvalidFormat)? as u32 + 1,
+				FTN_MONTHS
+					.iter()
+					.position(|&x| x == month)
+					.ok_or(DateTimeError::InvalidFormat)? as u32
+					+ 1,
 				year.parse::<u32>().map_err(map_parse_int_err)?,
 			);
 
@@ -721,20 +737,17 @@ fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 				.and_hms_opt(hh, mm, ss)
 				.ok_or(DateTimeError::time(hh, mm, ss))?)
 		}
-		_ => {
-			Err(DateTimeError::InvalidFormat)
-		}
+		_ => Err(DateTimeError::InvalidFormat),
 	}
 }
 
 #[cfg(test)]
 mod test {
-	use std::str::FromStr;
 	use super::{
-		Address, MessageId,
-		ParseAddressError, ParseMessageIdError, NetNodePairError, DateTimeError,
-		parse_net_node_pairs, parse_replyto, parse_ftn_datetime,
+		parse_ftn_datetime, parse_net_node_pairs, parse_replyto, Address, DateTimeError, MessageId, NetNodePairError,
+		ParseAddressError, ParseMessageIdError,
 	};
+	use std::str::FromStr;
 
 	#[test]
 	fn parse_valid_address() {
@@ -742,14 +755,32 @@ mod test {
 
 		assert_eq!(Address::from_str("2:1024/255"), Ok(Address::new_4d(2, 1024, 255, 0)));
 		assert_eq!(Address::from_str("2:1024/255.0"), Ok(Address::new_4d(2, 1024, 255, 0)));
-		assert_eq!(Address::from_str("2:1024/255.768"), Ok(Address::new_4d(2, 1024, 255, 768)));
+		assert_eq!(
+			Address::from_str("2:1024/255.768"),
+			Ok(Address::new_4d(2, 1024, 255, 768))
+		);
 
-		assert_eq!(Address::from_str("1:1024/255@Fidonet"), Ok(Address::full(1, 1024, 255, 0, Some("Fidonet".to_string()))));
-		assert_eq!(Address::from_str("1:1024/255.768@Fidonet"), Ok(Address::full(1, 1024, 255, 768, Some("Fidonet".to_string()))));
-		assert_eq!(Address::from_str("1:1024/255.768@Fid@net"), Ok(Address::full(1, 1024, 255, 768, Some("Fid@net".to_string()))));
+		assert_eq!(
+			Address::from_str("1:1024/255@Fidonet"),
+			Ok(Address::full(1, 1024, 255, 0, Some("Fidonet".to_string())))
+		);
+		assert_eq!(
+			Address::from_str("1:1024/255.768@Fidonet"),
+			Ok(Address::full(1, 1024, 255, 768, Some("Fidonet".to_string())))
+		);
+		assert_eq!(
+			Address::from_str("1:1024/255.768@Fid@net"),
+			Ok(Address::full(1, 1024, 255, 768, Some("Fid@net".to_string())))
+		);
 
-		assert_eq!(Address::from_str("1:1024/255@"), Ok(Address::full(1, 1024, 255, 0, Some("".to_string()))));
-		assert_eq!(Address::from_str("1:1024/255.768@"), Ok(Address::full(1, 1024, 255, 768, Some("".to_string()))));
+		assert_eq!(
+			Address::from_str("1:1024/255@"),
+			Ok(Address::full(1, 1024, 255, 0, Some("".to_string())))
+		);
+		assert_eq!(
+			Address::from_str("1:1024/255.768@"),
+			Ok(Address::full(1, 1024, 255, 768, Some("".to_string())))
+		);
 	}
 
 	#[test]
@@ -776,10 +807,25 @@ mod test {
 
 	#[test]
 	fn parse_valid_msgid() {
-		assert_eq!(MessageId::from_str("2:1024/255 4a34c4dd"), Ok(MessageId::nat(Address::new_4d(2, 1024, 255, 0), 0x4a34c4dd)));
-		assert_eq!(MessageId::from_str("2:1024/255.100@Fidonet 4a34c4dd"), Ok(MessageId::nat(Address::full(2, 1024, 255, 100, Some("Fidonet".to_string())), 0x4a34c4dd)));
+		assert_eq!(
+			MessageId::from_str("2:1024/255 4a34c4dd"),
+			Ok(MessageId::nat(Address::new_4d(2, 1024, 255, 0), 0x4a34c4dd))
+		);
+		assert_eq!(
+			MessageId::from_str("2:1024/255.100@Fidonet 4a34c4dd"),
+			Ok(MessageId::nat(
+				Address::full(2, 1024, 255, 100, Some("Fidonet".to_string())),
+				0x4a34c4dd
+			))
+		);
 
-		assert_eq!(MessageId::from_str("<1234567890@www.fido-online.com> 4A34C4DD"), Ok(MessageId::ext("<1234567890@www.fido-online.com>".to_string(), 0x4a34c4dd)));
+		assert_eq!(
+			MessageId::from_str("<1234567890@www.fido-online.com> 4A34C4DD"),
+			Ok(MessageId::ext(
+				"<1234567890@www.fido-online.com>".to_string(),
+				0x4a34c4dd
+			))
+		);
 	}
 
 	#[test]
@@ -796,12 +842,21 @@ mod test {
 
 	#[test]
 	fn parse_valid_pairs() {
-		assert_eq!(parse_net_node_pairs("1024/100 200 300"), Ok(vec![(1024, 100), (1024, 200), (1024, 300)]));
-		assert_eq!(parse_net_node_pairs("1024/100 4096/200 300"), Ok(vec![(1024, 100), (4096, 200), (4096, 300)]));
+		assert_eq!(
+			parse_net_node_pairs("1024/100 200 300"),
+			Ok(vec![(1024, 100), (1024, 200), (1024, 300)])
+		);
+		assert_eq!(
+			parse_net_node_pairs("1024/100 4096/200 300"),
+			Ok(vec![(1024, 100), (4096, 200), (4096, 300)])
+		);
 
 		// consider zero is valid
 		assert_eq!(parse_net_node_pairs("0/100 200"), Ok(vec![(0, 100), (0, 200)]));
-		assert_eq!(parse_net_node_pairs("1024/0 0 0"), Ok(vec![(1024, 0), (1024, 0), (1024, 0)]));
+		assert_eq!(
+			parse_net_node_pairs("1024/0 0 0"),
+			Ok(vec![(1024, 0), (1024, 0), (1024, 0)])
+		);
 	}
 
 	#[test]
@@ -819,8 +874,14 @@ mod test {
 	#[test]
 	fn parse_valid_replyto() {
 		assert_eq!(parse_replyto("2:46/128"), Ok((Address::new_4d(2, 46, 128, 0), "")));
-		assert_eq!(parse_replyto("2:5020/400 UUCP"), Ok((Address::new_4d(2, 5020, 400, 0), "UUCP")));
-		assert_eq!(parse_replyto("2:5020/400.100 UUCP"), Ok((Address::new_4d(2, 5020, 400, 100), "UUCP")));
+		assert_eq!(
+			parse_replyto("2:5020/400 UUCP"),
+			Ok((Address::new_4d(2, 5020, 400, 0), "UUCP"))
+		);
+		assert_eq!(
+			parse_replyto("2:5020/400.100 UUCP"),
+			Ok((Address::new_4d(2, 5020, 400, 100), "UUCP"))
+		);
 	}
 
 	#[test]
@@ -834,10 +895,22 @@ mod test {
 	fn parse_valid_ftn_datetime() {
 		use chrono::NaiveDate;
 
-		assert_eq!(parse_ftn_datetime("12 Dec 93  14:42:12"), Ok(NaiveDate::from_ymd(1993, 12, 12).and_hms(14, 42, 12)));
-		assert_eq!(parse_ftn_datetime(" 3 Oct 07  23:00:29"), Ok(NaiveDate::from_ymd(2007, 10, 03).and_hms(23, 00, 29)));
-		assert_eq!(parse_ftn_datetime("31 Oct 09  23:01:04"), Ok(NaiveDate::from_ymd(2009, 10, 31).and_hms(23, 01, 04)));
-		assert_eq!(parse_ftn_datetime("01 Mar 20  01:43:10"), Ok(NaiveDate::from_ymd(2020, 03, 01).and_hms(01, 43, 10)));
+		assert_eq!(
+			parse_ftn_datetime("12 Dec 93  14:42:12"),
+			Ok(NaiveDate::from_ymd(1993, 12, 12).and_hms(14, 42, 12))
+		);
+		assert_eq!(
+			parse_ftn_datetime(" 3 Oct 07  23:00:29"),
+			Ok(NaiveDate::from_ymd(2007, 10, 03).and_hms(23, 00, 29))
+		);
+		assert_eq!(
+			parse_ftn_datetime("31 Oct 09  23:01:04"),
+			Ok(NaiveDate::from_ymd(2009, 10, 31).and_hms(23, 01, 04))
+		);
+		assert_eq!(
+			parse_ftn_datetime("01 Mar 20  01:43:10"),
+			Ok(NaiveDate::from_ymd(2020, 03, 01).and_hms(01, 43, 10))
+		);
 	}
 
 	#[test]

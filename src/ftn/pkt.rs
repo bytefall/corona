@@ -1,8 +1,8 @@
-use std::error::Error;
-use std::io::{BufRead, BufReader, Read};
-use std::fmt;
 use chrono::{NaiveDate, NaiveDateTime};
 use podio::{BigEndian, LittleEndian, ReadPodExt};
+use std::error::Error;
+use std::fmt;
+use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug)]
 pub struct Address {
@@ -136,10 +136,7 @@ impl Package {
 
 				match r.read_to_end(&mut extra_bytes) {
 					Ok(0) => break, // there are no extra bytes
-					Ok(size) => eprintln!(
-						"There are {:?} byte(s) of unknown data at the end of pkt file!",
-						size
-					), // TODO: PackageError(extra_bytes)
+					Ok(size) => eprintln!("There are {:?} byte(s) of unknown data at the end of pkt file!", size), // TODO: PackageError(extra_bytes)
 					Err(e) => return Err(Box::new(e)),
 				}
 			}
@@ -166,11 +163,25 @@ impl Package {
 			r.read_until(0, &mut subj)?;
 			r.read_until(0, &mut text)?;
 
-			if posted.last() == Some(&0) { posted.pop(); }
-			if to_name.last() == Some(&0) { to_name.pop(); }
-			if from_name.last() == Some(&0) { from_name.pop(); }
-			if subj.last() == Some(&0) { subj.pop(); }
-			if text.last() == Some(&0) { text.pop(); }
+			if posted.last() == Some(&0) {
+				posted.pop();
+			}
+
+			if to_name.last() == Some(&0) {
+				to_name.pop();
+			}
+
+			if from_name.last() == Some(&0) {
+				from_name.pop();
+			}
+
+			if subj.last() == Some(&0) {
+				subj.pop();
+			}
+
+			if text.last() == Some(&0) {
+				text.pop();
+			}
 
 			messages.push(Message {
 				posted,
@@ -228,8 +239,8 @@ impl Package {
 
 #[cfg(test)]
 mod test {
-	use std::io::Cursor;
 	use super::Package;
+	use std::io::Cursor;
 
 	fn create_pkt() -> Vec<u8> {
 		let mut data = Vec::new();

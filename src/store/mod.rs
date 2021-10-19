@@ -1,6 +1,6 @@
+use rusqlite::{Connection, Error, Result, Transaction};
 use std::cell::RefCell;
 use std::path::Path;
-use rusqlite::{Error, Connection, Transaction, Result};
 
 use crate::core::{Message, NetNodePair};
 
@@ -28,15 +28,16 @@ impl MessageBase {
 		conn.pragma_update(None, "synchronous", &"NORMAL")?;
 
 		Ok(Self {
-			conn: RefCell::new(conn)
+			conn: RefCell::new(conn),
 		})
 	}
 
 	pub fn toss(&self, msg: Message) -> Result<i64> {
 		let mut conn = self.conn.borrow_mut();
 		let tran = conn.transaction()?;
- 
-		if let Ok(id) = tran.query_row_named("
+
+		if let Ok(id) = tran.query_row_named(
+			"
 			select
 				id
 			from
@@ -49,9 +50,12 @@ impl MessageBase {
 				":serial": msg.msgid_serial,
 				":posted": msg.posted,
 			},
-			|r| r.get::<_, i64>(0)
+			|r| r.get::<_, i64>(0),
 		) {
-			eprintln!("Message ({}, {:08x}) skipped because of a duplicate #{}", msg.posted, msg.msgid_serial, id);
+			eprintln!(
+				"Message ({}, {:08x}) skipped because of a duplicate #{}",
+				msg.posted, msg.msgid_serial, id
+			);
 
 			return Ok(-1); // TODO: report that dupe has been skipped
 		}
@@ -61,7 +65,8 @@ impl MessageBase {
 
 		let to = {
 			let id = if let Some(id) = msg.reply_serial {
-				match tran.query_row_named(r#"
+				match tran.query_row_named(
+					r#"
 					select
 						m.from_id
 					from
@@ -71,19 +76,26 @@ impl MessageBase {
 						m.from_id = u.id
 						and m.msgid_serial = :reply
 						and u.name = trim(:name)
-					"#, named_params! {
+					"#,
+					named_params! {
 						":reply": id,
 						":name": msg.to.name,
-					}, |r| r.get::<_, i64>(0)) {
-						Err(Error::QueryReturnedNoRows) => Ok(0),
-						Ok(v) => Ok(v),
-						Err(e) => Err(e),
-					}
+					},
+					|r| r.get::<_, i64>(0),
+				) {
+					Err(Error::QueryReturnedNoRows) => Ok(0),
+					Ok(v) => Ok(v),
+					Err(e) => Err(e),
+				}
 			} else {
 				Ok(0)
 			}?;
 
-			if id > 0 { id } else { get_user_id(&tran, &msg.to)? }
+			if id > 0 {
+				id
+			} else {
+				get_user_id(&tran, &msg.to)?
+			}
 		};
 
 		let seen_by = get_seenby_id(&tran, &msg.kludges.seen_by)?;
@@ -93,7 +105,8 @@ impl MessageBase {
 		let tear_line = get_tear_line_id(&tran, &msg.tear_line)?;
 		let origin = get_origin_id(&tran, &msg.origin)?;
 
-		tran.execute_named(r#"
+		tran.execute_named(
+			r#"
 			insert into messages (
 				posted,
 				tzutc,
@@ -130,7 +143,8 @@ impl MessageBase {
 				nullif(:tid, 0),
 				nullif(:seen_by, 0),
 				nullif(:path, 0)
-			)"#, named_params! {
+			)"#,
+			named_params! {
 				":posted": msg.posted,
 				":tzutc": msg.kludges.tzutc.as_ref().unwrap_or(&EMPTY_STRING),
 				":msgid_serial": msg.msgid_serial,
@@ -148,13 +162,17 @@ impl MessageBase {
 				":tid": tid,
 				":seen_by": seen_by,
 				":path": path,
-			})?;
+			},
+		)?;
 
 		let id = tran.last_insert_rowid();
 
 		if let Some(ref kludges) = msg.kludges.custom {
 			for kl in kludges {
-				tran.execute("insert into kludges (message_id, kludge) values (?, ?)", params![id, kl])?;
+				tran.execute(
+					"insert into kludges (message_id, kludge) values (?, ?)",
+					params![id, kl],
+				)?;
 			}
 		}
 
@@ -165,7 +183,9 @@ impl MessageBase {
 }
 
 fn get_user_id(tran: &Transaction, user: &crate::core::User) -> Result<i64> {
-	select_or_insert!(tran, r#"
+	select_or_insert!(
+		tran,
+		r#"
 		select
 			id
 		from
@@ -178,7 +198,8 @@ fn get_user_id(tran: &Transaction, user: &crate::core::User) -> Result<i64> {
 			and coalesce(point, 0) = :point
 			and coalesce(domain, '') = trim(:domain)
 			and coalesce(foreign_address, '') = trim(:ext_addr)
-		"#, r#"
+		"#,
+		r#"
 		insert into users (
 			name,
 			zone,
@@ -213,7 +234,8 @@ fn get_software_id(tran: &Transaction, name: &str) -> Result<i64> {
 		return Ok(0);
 	}
 
-	select_or_insert!(tran,
+	select_or_insert!(
+		tran,
 		"select id from software where name = trim(:name)",
 		"insert into software (name) values (trim(:name))",
 		named_params! { ":name": &name }
@@ -225,7 +247,8 @@ fn get_subj_id(tran: &Transaction, subj: &str) -> Result<i64> {
 		return Ok(0);
 	}
 
-	select_or_insert!(tran,
+	select_or_insert!(
+		tran,
 		"select id from subjects where subject = trim(:subj)",
 		"insert into subjects (subject) values (trim(:subj))",
 		named_params! { ":subj": &subj }
@@ -237,7 +260,8 @@ fn get_tear_line_id(tran: &Transaction, tl: &str) -> Result<i64> {
 		return Ok(0);
 	}
 
-	select_or_insert!(tran,
+	select_or_insert!(
+		tran,
 		"select id from tear_lines where tear_line = trim(:tl)",
 		"insert into tear_lines (tear_line) values (trim(:tl))",
 		named_params! { ":tl": &tl }
@@ -249,7 +273,8 @@ fn get_origin_id(tran: &Transaction, origin: &str) -> Result<i64> {
 		return Ok(0);
 	}
 
-	select_or_insert!(tran,
+	select_or_insert!(
+		tran,
 		"select id from origins where origin = trim(:origin)",
 		"insert into origins (origin) values (trim(:origin))",
 		named_params! { ":origin": &origin }
@@ -280,7 +305,9 @@ fn get_seenby_id(tran: &Transaction, seen_by: &Option<Vec<NetNodePair>>) -> Resu
 	arr.push(']');
 
 	// NB: values should be sorted by "net", "node" in order to compare resulting json array
-	select_or_insert_v2!(tran, r#"
+	select_or_insert_v2!(
+		tran,
+		r#"
 		select
 			v.id
 		from (
@@ -308,7 +335,8 @@ fn get_seenby_id(tran: &Transaction, seen_by: &Option<Vec<NetNodePair>>) -> Resu
 						node
 				) a
 			)
-		"#, r#"
+		"#,
+		r#"
 		insert into seen_bys (
 			id,
 			net,
@@ -358,7 +386,9 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 
 	arr.push(']');
 
-	select_or_insert_v2!(tran, r#"
+	select_or_insert_v2!(
+		tran,
+		r#"
 		select
 			v.id
 		from (
@@ -373,7 +403,8 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 		) v
 		where
 			v.arr = json(:arr)
-		"#, r#"
+		"#,
+		r#"
 		insert into paths (
 			id,
 			position,
@@ -400,7 +431,8 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 }
 
 fn prepare_database(conn: Connection) -> Result<Connection> {
-	conn.execute_batch(r#"
+	conn.execute_batch(
+		r#"
 PRAGMA page_size = 8192;
 
 begin;
@@ -497,7 +529,8 @@ create table if not exists kludges (
 create index if not exists kludge_index on kludges (message_id);
 
 commit;
-	"#)?;
+	"#,
+	)?;
 
 	Ok(conn)
 }

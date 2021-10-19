@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::path::{Path, PathBuf};
 use std::fs;
 use std::fs::File;
+use std::path::{Path, PathBuf};
 
-use crate::core::Area;
 use crate::cfg::Config;
+use crate::core::Area;
 use crate::store::MessageBase;
 
 enum InboundType {
@@ -19,26 +19,35 @@ pub fn toss(config: &Config) -> Result<(), Box<dyn Error>> {
 
 	let mut inbound: Vec<_> = fs::read_dir(inbound)?
 		.filter_map(|e| e.ok())
-		.filter_map(|e| if let Ok(m) = e.metadata() { Some((e.path(), m)) } else { None })
+		.filter_map(|e| {
+			if let Ok(m) = e.metadata() {
+				Some((e.path(), m))
+			} else {
+				None
+			}
+		})
 		.filter(|(_, m)| m.is_file())
 		.filter(|(_, m)| m.len() > 64)
 		.filter_map(|(p, m)| {
 			let (name, ext) = file_name_ext(&p);
-	
+
 			if name == "" || ext.len() != 3 {
 				return None;
 			}
-	
+
 			match (&ext[..2], &ext[2..]) {
-				("pk", "t") =>
-					Some((p, InboundType::Package, m)),
-				("su" | "mo" | "tu" | "we" | "th" | "fr" | "sa", _) =>
-					Some((p, InboundType::Bundle, m)),
-				_ =>
-					None,
+				("pk", "t") => Some((p, InboundType::Package, m)),
+				("su" | "mo" | "tu" | "we" | "th" | "fr" | "sa", _) => Some((p, InboundType::Bundle, m)),
+				_ => None,
 			}
 		})
-		.filter_map(|(p, t, m)| if let Ok(tmod) = m.modified() { Some((p, t, tmod)) } else { None })
+		.filter_map(|(p, t, m)| {
+			if let Ok(tmod) = m.modified() {
+				Some((p, t, tmod))
+			} else {
+				None
+			}
+		})
 		.collect();
 
 	inbound.sort_by(|(_, _, mx), (_, _, my)| mx.cmp(&my));
@@ -114,14 +123,21 @@ fn bad_mail(path: &Path, err: Box<dyn Error>) -> Result<(), Box<dyn Error>> {
 	Ok(())
 }
 
-fn toss_messages(inbound: Vec<crate::core::Message>, msgbase: &Path, bases: &mut HashMap<PathBuf, MessageBase>) -> Result<(), Box<dyn Error>> {
+fn toss_messages(
+	inbound: Vec<crate::core::Message>,
+	msgbase: &Path,
+	bases: &mut HashMap<PathBuf, MessageBase>,
+) -> Result<(), Box<dyn Error>> {
 	for msg in inbound {
 		let db_path = match msg.area {
 			Area::Netmail => msgbase.join("netmail"),
 			Area::Echomail(ref name) => msgbase.join(&name.to_ascii_lowercase()),
 		};
 
-		let mb = bases.entry(db_path.clone()).or_insert_with(|| MessageBase::open(&db_path).unwrap());
+		let mb = bases
+			.entry(db_path.clone())
+			.or_insert_with(|| MessageBase::open(&db_path).unwrap());
+
 		mb.toss(msg)?;
 	}
 
