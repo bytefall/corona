@@ -88,9 +88,9 @@ impl Package {
 		let second = r.read_u16::<LittleEndian>()?;
 
 		let created = NaiveDate::from_ymd_opt(year.into(), month.into(), day.into())
-			.ok_or(Box::new(PackageError::date(year, month, day)))?
+			.ok_or_else(|| Box::new(PackageError::date(year, month, day)))?
 			.and_hms_opt(hour.into(), minute.into(), second.into())
-			.ok_or(Box::new(PackageError::time(hour, minute, second)))?;
+			.ok_or_else(|| Box::new(PackageError::time(hour, minute, second)))?;
 
 		let rate = r.read_u16::<LittleEndian>()?;
 		let ver = r.read_u16::<LittleEndian>()?;

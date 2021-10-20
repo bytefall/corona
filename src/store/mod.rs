@@ -230,7 +230,7 @@ fn get_user_id(tran: &Transaction, user: &crate::core::User) -> Result<i64> {
 }
 
 fn get_software_id(tran: &Transaction, name: &str) -> Result<i64> {
-	if name.trim().len() == 0 {
+	if name.trim().is_empty() {
 		return Ok(0);
 	}
 
@@ -243,7 +243,7 @@ fn get_software_id(tran: &Transaction, name: &str) -> Result<i64> {
 }
 
 fn get_subj_id(tran: &Transaction, subj: &str) -> Result<i64> {
-	if subj.trim().len() == 0 {
+	if subj.trim().is_empty() {
 		return Ok(0);
 	}
 
@@ -256,7 +256,7 @@ fn get_subj_id(tran: &Transaction, subj: &str) -> Result<i64> {
 }
 
 fn get_tear_line_id(tran: &Transaction, tl: &str) -> Result<i64> {
-	if tl.trim().len() == 0 {
+	if tl.trim().is_empty() {
 		return Ok(0);
 	}
 
@@ -269,7 +269,7 @@ fn get_tear_line_id(tran: &Transaction, tl: &str) -> Result<i64> {
 }
 
 fn get_origin_id(tran: &Transaction, origin: &str) -> Result<i64> {
-	if origin.trim().len() == 0 {
+	if origin.trim().is_empty() {
 		return Ok(0);
 	}
 
@@ -297,7 +297,7 @@ fn get_seenby_id(tran: &Transaction, seen_by: &Option<Vec<NetNodePair>>) -> Resu
 	while let Some((net, node)) = i.next() {
 		arr.push_str(&format!("[{},{}]", net, node));
 
-		if let Some(_) = i.peek() {
+		if i.peek().is_some() {
 			arr.push(',');
 		}
 	}
@@ -379,7 +379,7 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 	while let Some((net, node)) = i.next() {
 		arr.push_str(&format!("[{},{}]", net, node));
 
-		if let Some(_) = i.peek() {
+		if i.peek().is_some() {
 			arr.push(',');
 		}
 	}

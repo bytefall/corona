@@ -210,12 +210,12 @@ pub fn messages_from(pkg: crate::ftn::Package) -> Result<Vec<Message>, Box<dyn E
 			posted,
 			from: User {
 				addr: m.from.address.into(),
-				name: String::from(IBM866.decode(&m.from.name, DecoderTrap::Strict)?),
+				name: IBM866.decode(&m.from.name, DecoderTrap::Strict)?,
 				ext_addr: None,
 			},
 			to: User {
 				addr: m.to.address.into(),
-				name: String::from(IBM866.decode(&m.to.name, DecoderTrap::Strict)?),
+				name: IBM866.decode(&m.to.name, DecoderTrap::Strict)?,
 				ext_addr: None,
 			},
 			flags: m.flags,
@@ -223,14 +223,14 @@ pub fn messages_from(pkg: crate::ftn::Package) -> Result<Vec<Message>, Box<dyn E
 			reply_serial: None,
 			msgid_addr: None,
 			reply_addr: None,
-			subj: String::from(IBM866.decode(&m.subj, DecoderTrap::Strict)?), // DecoderTrap::Ignore
+			subj: IBM866.decode(&m.subj, DecoderTrap::Strict)?, // DecoderTrap::Ignore
 			body: String::with_capacity(m.text.len()),
 			tear_line: String::new(),
 			origin: String::new(),
 			kludges: ControlLines::empty(),
 		};
 
-		let text = String::from(IBM866.decode(&m.text, DecoderTrap::Strict)?).replace("\r", "\n");
+		let text = IBM866.decode(&m.text, DecoderTrap::Strict)?.replace("\r", "\n");
 
 		parse_tokens(&tokenize_msg_body(&text)?, &mut msg)?;
 
@@ -283,7 +283,7 @@ const ORIGIN: &str = " * Origin: ";
 const SEEN_BY: &str = "SEEN-BY: ";
 
 // &nbsp; is treated as \u{a0}
-fn tokenize_msg_body<'a>(text: &'a str) -> Result<Vec<TokenPair<'a>>, Box<dyn Error>> {
+fn tokenize_msg_body(text: &str) -> Result<Vec<TokenPair<'_>>, Box<dyn Error>> {
 	let mut tokens = Vec::new();
 
 	for par in text.split(NEWLINE) {
@@ -436,17 +436,17 @@ fn parse_tokens(tokens: &[TokenPair], msg: &mut Message) -> Result<(), Box<dyn E
 				Err(_) => eprintln!("PATH parse fail: {}", s),
 			},
 			Token::Kludge => {
-				if s.starts_with(REPLYADDR) {
-					msg.from.ext_addr = Some(s[REPLYADDR.len()..].to_string());
-				} else if s.starts_with(REPLYADDR_V2) {
-					msg.from.ext_addr = Some(s[REPLYADDR_V2.len()..].to_string());
+				if let Some(suffix) = s.strip_prefix(REPLYADDR) {
+					msg.from.ext_addr = Some(suffix.to_string());
+				} else if let Some(suffix) = s.strip_prefix(REPLYADDR_V2) {
+					msg.from.ext_addr = Some(suffix.to_string());
 				} else {
-					if s.starts_with(REPLYTO) {
-						if let Ok((a, _name)) = parse_replyto(s[REPLYTO.len()..].trim()) {
+					if let Some(suffix) = s.strip_prefix(REPLYTO) {
+						if let Ok((a, _name)) = parse_replyto(suffix.trim()) {
 							native_from = Some(a);
 						}
-					} else if s.starts_with(REPLYTO_V2) {
-						if let Ok((a, _name)) = parse_replyto(s[REPLYTO_V2.len()..].trim()) {
+					} else if let Some(suffix) = s.strip_prefix(REPLYTO_V2) {
+						if let Ok((a, _name)) = parse_replyto(suffix.trim()) {
 							native_from = Some(a);
 						}
 					}
@@ -462,7 +462,7 @@ fn parse_tokens(tokens: &[TokenPair], msg: &mut Message) -> Result<(), Box<dyn E
 	}
 
 	// trim NEWLINE from the last Token::Paragraph
-	if msg.body.chars().last() == Some(NEWLINE) {
+	if msg.body.ends_with(NEWLINE) {
 		msg.body.pop();
 	}
 
@@ -599,11 +599,11 @@ impl std::str::FromStr for MessageId {
 
 				let sl = u32::from_str_radix(ser, 16).map_err(|_| Self::Err::InvalidFormat)?;
 
-				return Ok(if let Ok(a) = Address::from_str(addr) {
+				Ok(if let Ok(a) = Address::from_str(addr) {
 					MessageId::nat(a, sl)
 				} else {
 					MessageId::ext(addr.to_string(), sl)
-				});
+				})
 			}
 			_ => Err(Self::Err::InvalidFormat),
 		}
@@ -659,7 +659,7 @@ fn parse_net_node_pairs(s: &str) -> Result<Vec<NetNodePair>, NetNodePairError> {
 		}
 	}
 
-	return Ok(pairs);
+	Ok(pairs)
 }
 
 fn parse_replyto(s: &str) -> Result<(Address, &str), ParseAddressError> {
@@ -674,18 +674,18 @@ fn parse_replyto(s: &str) -> Result<(Address, &str), ParseAddressError> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DateTimeError {
-	InvalidFormat,
-	InvalidDate { year: u32, month: u32, day: u32 },
-	InvalidTime { hour: u32, minute: u32, second: u32 },
+	Format,
+	Date { year: u32, month: u32, day: u32 },
+	Time { hour: u32, minute: u32, second: u32 },
 }
 
 impl DateTimeError {
 	fn date(year: u32, month: u32, day: u32) -> Self {
-		DateTimeError::InvalidDate { year, month, day }
+		DateTimeError::Date { year, month, day }
 	}
 
 	fn time(hour: u32, minute: u32, second: u32) -> Self {
-		DateTimeError::InvalidTime { hour, minute, second }
+		DateTimeError::Time { hour, minute, second }
 	}
 }
 
@@ -695,10 +695,10 @@ const FTN_MONTHS: &[&str] = &[
 
 fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 	if s.len() != 19 {
-		return Err(DateTimeError::InvalidFormat);
+		return Err(DateTimeError::Format);
 	}
 
-	let map_parse_int_err = |_| DateTimeError::InvalidFormat;
+	let map_parse_int_err = |_| DateTimeError::Format;
 
 	match (
 		&s[..2],
@@ -719,7 +719,7 @@ fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 				FTN_MONTHS
 					.iter()
 					.position(|&x| x == month)
-					.ok_or(DateTimeError::InvalidFormat)? as u32
+					.ok_or(DateTimeError::Format)? as u32
 					+ 1,
 				year.parse::<u32>().map_err(map_parse_int_err)?,
 			);
@@ -733,11 +733,11 @@ fn parse_ftn_datetime(s: &str) -> Result<NaiveDateTime, DateTimeError> {
 			);
 
 			Ok(NaiveDate::from_ymd_opt(year as i32, month, day)
-				.ok_or(DateTimeError::date(year, month, day))?
+				.ok_or_else(|| DateTimeError::date(year, month, day))?
 				.and_hms_opt(hh, mm, ss)
-				.ok_or(DateTimeError::time(hh, mm, ss))?)
+				.ok_or_else(|| DateTimeError::time(hh, mm, ss))?)
 		}
-		_ => Err(DateTimeError::InvalidFormat),
+		_ => Err(DateTimeError::Format),
 	}
 }
 
@@ -917,7 +917,7 @@ mod test {
 	fn fail_on_invalid_ftn_datetime() {
 		use DateTimeError::*;
 
-		assert_eq!(parse_ftn_datetime("12 Dec 93 14:42:12").unwrap_err(), InvalidFormat);
-		assert_eq!(parse_ftn_datetime("12 Dec 93  14;42;12").unwrap_err(), InvalidFormat);
+		assert_eq!(parse_ftn_datetime("12 Dec 93 14:42:12").unwrap_err(), Format);
+		assert_eq!(parse_ftn_datetime("12 Dec 93  14;42;12").unwrap_err(), Format);
 	}
 }

@@ -31,7 +31,7 @@ pub fn toss(config: &Config) -> Result<(), Box<dyn Error>> {
 		.filter_map(|(p, m)| {
 			let (name, ext) = file_name_ext(&p);
 
-			if name == "" || ext.len() != 3 {
+			if name.is_empty() || ext.len() != 3 {
 				return None;
 			}
 
@@ -50,7 +50,7 @@ pub fn toss(config: &Config) -> Result<(), Box<dyn Error>> {
 		})
 		.collect();
 
-	inbound.sort_by(|(_, _, mx), (_, _, my)| mx.cmp(&my));
+	inbound.sort_by(|(_, _, mx), (_, _, my)| mx.cmp(my));
 
 	let mut bases = HashMap::new();
 
@@ -62,7 +62,7 @@ pub fn toss(config: &Config) -> Result<(), Box<dyn Error>> {
 						println!("tossing {:?}", path);
 
 						fn get_messages(file: &File) -> Result<Vec<crate::core::Message>, Box<dyn Error>> {
-							Ok(crate::core::messages_from(crate::ftn::Package::read(file)?)?)
+							crate::core::messages_from(crate::ftn::Package::read(file)?)
 						}
 
 						match get_messages(&file) {
@@ -114,7 +114,7 @@ fn file_name_ext(path: &Path) -> (&str, &str) {
 }
 
 fn bad_mail(path: &Path, err: Box<dyn Error>) -> Result<(), Box<dyn Error>> {
-	let (name, ext) = file_name_ext(&path);
+	let (name, ext) = file_name_ext(path);
 
 	eprintln!("Failed to read \"{}\", reason: {}", name, err);
 

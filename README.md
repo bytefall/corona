@@ -17,5 +17,5 @@ Corona is an echomail processor / netmail tracker for FidoNet Technology Network
 ### Compile
 
 Execute
-	- `cargo build` to compile in *debug* mode or
-	- `cargo build --release` for *release* mode.
+- `cargo build` to compile in *debug* mode or
+- `cargo build --release` for *release* mode.

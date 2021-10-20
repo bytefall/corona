@@ -15,7 +15,10 @@ impl Bundle {
 
 		for i in 0..arc.len() {
 			// println!("file index {}", i);
-			let file = arc.by_index(i).expect(&format!("Failed to get a file by_index({})", i));
+			let file = arc
+				.by_index(i)
+				.unwrap_or_else(|_| panic!("Failed to get a file by_index({})", i));
+
 			let path = file.sanitized_name();
 
 			if path.extension().map_or("", |x| x.to_str().unwrap_or("")) == "pkt" {
