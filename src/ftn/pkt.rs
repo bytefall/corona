@@ -73,6 +73,8 @@ impl Error for PackageError {
 	}
 }
 
+const POSTED_DATE_LEN: usize = 19;
+
 impl Package {
 	pub fn read(data: impl Read) -> Result<Package, Box<dyn Error>> {
 		let mut r = BufReader::new(data);
@@ -149,7 +151,20 @@ impl Package {
 
 			let flags = r.read_u16::<LittleEndian>()?;
 
-			r.read_u16::<LittleEndian>()?; // unused
+			let _ = r.read_u16::<LittleEndian>()?;
+
+			fn read_excl_zero(r: &mut BufReader<impl Read>, v: &mut Vec<u8>) -> std::io::Result<usize> {
+				let len = r.read_until(0, v)?;
+
+				match v.last() {
+					Some(&0) => {
+						v.pop();
+
+						Ok(len - 1)
+					}
+					_ => Ok(len),
+				}
+			}
 
 			let mut posted = Vec::new();
 			let mut to_name = Vec::new();
@@ -157,31 +172,30 @@ impl Package {
 			let mut subj = Vec::new();
 			let mut text = Vec::new();
 
-			r.read_until(0, &mut posted)?;
-			r.read_until(0, &mut to_name)?;
-			r.read_until(0, &mut from_name)?;
-			r.read_until(0, &mut subj)?;
-			r.read_until(0, &mut text)?;
+			let posted_len = read_excl_zero(&mut r, &mut posted)?;
 
-			if posted.last() == Some(&0) {
-				posted.pop();
+			if posted_len != POSTED_DATE_LEN {
+				eprintln!(
+					"Warning: posted date length {} != {}. Actual value: {:02X?}",
+					posted_len, POSTED_DATE_LEN, posted
+				);
+
+				posted.clear();
+
+				for _ in posted_len..POSTED_DATE_LEN {
+					let extra = r.read_u8()?;
+
+					if extra != 0 {
+						to_name.push(extra); // oops, bring it back
+						break;
+					}
+				}
 			}
 
-			if to_name.last() == Some(&0) {
-				to_name.pop();
-			}
-
-			if from_name.last() == Some(&0) {
-				from_name.pop();
-			}
-
-			if subj.last() == Some(&0) {
-				subj.pop();
-			}
-
-			if text.last() == Some(&0) {
-				text.pop();
-			}
+			read_excl_zero(&mut r, &mut to_name)?;
+			read_excl_zero(&mut r, &mut from_name)?;
+			read_excl_zero(&mut r, &mut subj)?;
+			read_excl_zero(&mut r, &mut text)?;
 
 			messages.push(Message {
 				posted,

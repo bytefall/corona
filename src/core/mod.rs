@@ -199,8 +199,11 @@ pub fn messages_from(pkg: crate::ftn::Package) -> Result<Vec<Message>, Box<dyn E
 		let posted = String::from_utf8(m.posted)?;
 		let posted = match parse_ftn_datetime(&posted) {
 			Ok(dt) => dt,
-			Err(_) => {
-				eprintln!("Posted parse fail: {}", &posted);
+			Err(e) => {
+				eprintln!(
+					"Warning: failed to parse posted date \"{}\", reason: \"{:?}\". Falling back to pkg create date.",
+					&posted, e
+				);
 				pkg.created
 			}
 		};
