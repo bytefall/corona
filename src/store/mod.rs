@@ -1,6 +1,5 @@
-use rusqlite::{Connection, Error, Result, Transaction};
-use std::cell::RefCell;
-use std::path::Path;
+use rusqlite::{named_params, Connection, Error, Result, Transaction};
+use std::{cell::RefCell, fmt::Write, path::Path};
 
 use crate::core::{Message, NetNodePair};
 
@@ -36,7 +35,7 @@ impl MessageBase {
 		let mut conn = self.conn.borrow_mut();
 		let tran = conn.transaction()?;
 
-		if let Ok(id) = tran.query_row_named(
+		if let Ok(id) = tran.query_row(
 			"
 			select
 				id
@@ -65,7 +64,7 @@ impl MessageBase {
 
 		let to = {
 			let id = if let Some(id) = msg.reply_serial {
-				match tran.query_row_named(
+				match tran.query_row(
 					r#"
 					select
 						m.from_id
@@ -105,7 +104,7 @@ impl MessageBase {
 		let tear_line = get_tear_line_id(&tran, &msg.tear_line)?;
 		let origin = get_origin_id(&tran, &msg.origin)?;
 
-		tran.execute_named(
+		tran.execute(
 			r#"
 			insert into messages (
 				posted,
@@ -170,8 +169,11 @@ impl MessageBase {
 		if let Some(ref kludges) = msg.kludges.custom {
 			for kl in kludges {
 				tran.execute(
-					"insert into kludges (message_id, kludge) values (?, ?)",
-					params![id, kl],
+					"insert into kludges (message_id, kludge) values (:id, :kludge)",
+					named_params! {
+						":id": id,
+						":kludge": kl,
+					},
 				)?;
 			}
 		}
@@ -295,7 +297,7 @@ fn get_seenby_id(tran: &Transaction, seen_by: &Option<Vec<NetNodePair>>) -> Resu
 	let mut i = seen_by.iter().peekable();
 
 	while let Some((net, node)) = i.next() {
-		arr.push_str(&format!("[{},{}]", net, node));
+		write!(arr, "[{},{}]", net, node).unwrap();
 
 		if i.peek().is_some() {
 			arr.push(',');
@@ -377,7 +379,7 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 	let mut i = path.iter().peekable();
 
 	while let Some((net, node)) = i.next() {
-		arr.push_str(&format!("[{},{}]", net, node));
+		write!(arr, "[{},{}]", net, node).unwrap();
 
 		if i.peek().is_some() {
 			arr.push(',');

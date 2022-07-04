@@ -5,7 +5,6 @@ authors = ["Oleg Scherbakov <scherbakov.oleg@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-#clap = "2.33"
 dirs = "2.0"
 toml = "0.5"
 serde = "1.0"
@@ -16,5 +15,5 @@ chrono = "0.4"
 encoding = "0.2"
 
 [dependencies.rusqlite]
-version = "0.21"
-features = ["chrono", "functions", "bundled"]
+version = "0.27"
+features = ["chrono", "bundled"]

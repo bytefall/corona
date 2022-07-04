@@ -233,7 +233,7 @@ pub fn messages_from(pkg: crate::ftn::Package) -> Result<Vec<Message>, Box<dyn E
 			kludges: ControlLines::empty(),
 		};
 
-		let text = IBM866.decode(&m.text, DecoderTrap::Strict)?.replace("\r", "\n");
+		let text = IBM866.decode(&m.text, DecoderTrap::Strict)?.replace('\r', "\n");
 
 		parse_tokens(&tokenize_msg_body(&text)?, &mut msg)?;
 
@@ -505,8 +505,8 @@ fn parse_tokens(tokens: &[TokenPair], msg: &mut Message) -> Result<(), Box<dyn E
 					INTL => {
 						let mut i = s[INTL.len()..].trim().split(' ');
 
-						let dest = i.next().map(|x| Address::from_str(x).ok()).flatten();
-						let orig = i.next().map(|x| Address::from_str(x).ok()).flatten();
+						let dest = i.next().and_then(|x| Address::from_str(x).ok());
+						let orig = i.next().and_then(|x| Address::from_str(x).ok());
 
 						match (dest, orig) {
 							(Some(dest), Some(orig)) => {
