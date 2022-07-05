@@ -1,8 +1,10 @@
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use chrono::{NaiveDate, NaiveDateTime};
-use podio::{BigEndian, LittleEndian, ReadPodExt};
-use std::error::Error;
-use std::fmt;
-use std::io::{BufRead, BufReader, Read};
+use std::{
+	error::Error,
+	fmt,
+	io::{BufRead, BufReader, Read},
+};
 
 #[derive(Debug)]
 pub struct Address {
@@ -103,13 +105,9 @@ impl Package {
 		let prod_code = r.read_u8()?;
 		let serial_no = r.read_u8()?;
 
-		let password = ReadPodExt::read_exact(&mut r, 8)?;
-		let password = if let Some(x) = password.iter().position(|&x| x == 0) {
-			password[..x].to_vec()
-		} else {
-			password
-		};
-		let password = String::from_utf8(password)?;
+		let mut password = [0u8; 8];
+		r.read_exact(&mut password)?;
+		let password = String::from_utf8(password.into_iter().take_while(|x| x != &0).collect())?;
 
 		let orig_zone = r.read_u16::<LittleEndian>()?;
 		let dest_zone = r.read_u16::<LittleEndian>()?;
