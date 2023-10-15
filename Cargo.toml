@@ -5,15 +5,13 @@ authors = ["Oleg Scherbakov <scherbakov.oleg@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-dirs = "2.0"
-toml = "0.5"
-serde = "1.0"
-serde_derive = "1.0"
-zip = "0.5"
 byteorder = "1.4"
 chrono = "0.4"
+dirs = "2.0"
 encoding = "0.2"
+rusqlite = { version = "0.29", features = ["chrono", "bundled"] }
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.5"
+zip = "0.5"
 
-[dependencies.rusqlite]
-version = "0.27"
-features = ["chrono", "bundled"]
