@@ -6,8 +6,6 @@ use crate::core::{Message, NetNodePair};
 #[macro_use]
 mod sql_macro;
 
-const EMPTY_STRING: String = String::new();
-
 pub struct MessageBase {
 	conn: RefCell<Connection>,
 }
@@ -21,10 +19,10 @@ impl MessageBase {
 		// };
 
 		let conn = prepare_database(Connection::open(path)?)?;
-		conn.pragma_update(None, "foreign_keys", &"ON")?;
-		conn.pragma_update(None, "temp_store", &"MEMORY")?;
-		conn.pragma_update(None, "journal_mode", &"WAL")?;
-		conn.pragma_update(None, "synchronous", &"NORMAL")?;
+		conn.pragma_update(None, "foreign_keys", "ON")?;
+		conn.pragma_update(None, "temp_store", "MEMORY")?;
+		conn.pragma_update(None, "journal_mode", "WAL")?;
+		conn.pragma_update(None, "synchronous", "NORMAL")?;
 
 		Ok(Self {
 			conn: RefCell::new(conn),
@@ -145,11 +143,11 @@ impl MessageBase {
 			)"#,
 			named_params! {
 				":posted": msg.posted,
-				":tzutc": msg.kludges.tzutc.as_ref().unwrap_or(&EMPTY_STRING),
+				":tzutc": msg.kludges.tzutc,
 				":msgid_serial": msg.msgid_serial,
-				":reply_serial": msg.reply_serial.unwrap_or(0),
-				":msgid_addr": msg.msgid_addr.as_ref().unwrap_or(&EMPTY_STRING),
-				":reply_addr": msg.reply_addr.as_ref().unwrap_or(&EMPTY_STRING),
+				":reply_serial": msg.reply_serial,
+				":msgid_addr": msg.msgid_addr,
+				":reply_addr": msg.reply_addr,
 				":from": from,
 				":to": to,
 				":flags": msg.flags,
@@ -220,13 +218,13 @@ fn get_user_id(tran: &Transaction, user: &crate::core::User) -> Result<i64> {
 			nullif(trim(:ext_addr), '')
 		)"#,
 		named_params! {
-			":name": &user.name,
-			":zone": &user.addr.zone,
-			":net": &user.addr.net,
-			":node": &user.addr.node,
-			":point": &user.addr.point,
-			":domain": &user.addr.domain.as_ref().unwrap_or(&EMPTY_STRING),
-			":ext_addr": &user.ext_addr.as_ref().unwrap_or(&EMPTY_STRING),
+			":name": user.name,
+			":zone": user.addr.zone,
+			":net": user.addr.net,
+			":node": user.addr.node,
+			":point": user.addr.point,
+			":domain": user.addr.domain,
+			":ext_addr": user.ext_addr,
 		}
 	)
 }
@@ -240,7 +238,7 @@ fn get_software_id(tran: &Transaction, name: &str) -> Result<i64> {
 		tran,
 		"select id from software where name = trim(:name)",
 		"insert into software (name) values (trim(:name))",
-		named_params! { ":name": &name }
+		named_params! { ":name": name }
 	)
 }
 
@@ -253,7 +251,7 @@ fn get_subj_id(tran: &Transaction, subj: &str) -> Result<i64> {
 		tran,
 		"select id from subjects where subject = trim(:subj)",
 		"insert into subjects (subject) values (trim(:subj))",
-		named_params! { ":subj": &subj }
+		named_params! { ":subj": subj }
 	)
 }
 
@@ -266,7 +264,7 @@ fn get_tear_line_id(tran: &Transaction, tl: &str) -> Result<i64> {
 		tran,
 		"select id from tear_lines where tear_line = trim(:tl)",
 		"insert into tear_lines (tear_line) values (trim(:tl))",
-		named_params! { ":tl": &tl }
+		named_params! { ":tl": tl }
 	)
 }
 
@@ -279,7 +277,7 @@ fn get_origin_id(tran: &Transaction, origin: &str) -> Result<i64> {
 		tran,
 		"select id from origins where origin = trim(:origin)",
 		"insert into origins (origin) values (trim(:origin))",
-		named_params! { ":origin": &origin }
+		named_params! { ":origin": origin }
 	)
 }
 
@@ -361,7 +359,7 @@ fn get_seenby_id(tran: &Transaction, seen_by: &Option<Vec<NetNodePair>>) -> Resu
 			v.node
 		"#,
 		"select max(id) from seen_bys",
-		named_params! { ":arr": &arr }
+		named_params! { ":arr": arr }
 	)
 }
 
@@ -428,7 +426,7 @@ fn get_path_id(tran: &Transaction, path: &Option<Vec<NetNodePair>>) -> Result<i6
 		) v
 		"#,
 		"select max(id) from paths",
-		named_params! { ":arr": &arr }
+		named_params! { ":arr": arr }
 	)
 }
 

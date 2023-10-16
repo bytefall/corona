@@ -30,6 +30,7 @@ pub struct Message {
 	pub text: Vec<u8>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Package {
 	orig: Address,

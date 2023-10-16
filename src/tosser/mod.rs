@@ -118,7 +118,7 @@ fn bad_mail(path: &Path, err: Box<dyn Error>) -> Result<(), Box<dyn Error>> {
 
 	eprintln!("Failed to read \"{}\", reason: {}", name, err);
 
-	fs::rename(&path, Path::new(&path).with_extension(ext.to_string() + ".bad"))?;
+	fs::rename(path, Path::new(&path).with_extension(ext.to_string() + ".bad"))?;
 
 	Ok(())
 }
