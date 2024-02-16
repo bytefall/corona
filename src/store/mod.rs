@@ -97,8 +97,8 @@ impl MessageBase {
 
 		let seen_by = get_seenby_id(&tran, &msg.kludges.seen_by)?;
 		let path = get_path_id(&tran, &msg.kludges.path)?;
-		let pid = msg.kludges.pid.map_or(Ok(0), |x| get_software_id(&tran, &x))?;
-		let tid = msg.kludges.tid.map_or(Ok(0), |x| get_software_id(&tran, &x))?;
+		let pid = msg.kludges.pid.map(|x| get_software_id(&tran, &x)).transpose()?;
+		let tid = msg.kludges.tid.map(|x| get_software_id(&tran, &x)).transpose()?;
 		let tear_line = get_tear_line_id(&tran, &msg.tear_line)?;
 		let origin = get_origin_id(&tran, &msg.origin)?;
 
