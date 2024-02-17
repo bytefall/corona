@@ -12,7 +12,7 @@ Corona is an echomail processor / netmail tracker for FidoNet Technology Network
 ### Requirements
 
 1. Rust
-	- Install [Rust](https://www.rust-lang.org/tools/install).
+    - Install [Rust](https://www.rust-lang.org/tools/install).
 
 ### Compile
 
