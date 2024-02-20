@@ -1,12 +1,14 @@
 [package]
 name = "corona"
 version = "0.1.0"
+description = "Corona is a FTN tosser"
 authors = ["Oleg Scherbakov <scherbakov.oleg@gmail.com>"]
 edition = "2021"
 
 [dependencies]
 byteorder = "1.4"
 chrono = "0.4"
+clap = { version = "4.5", features = ["derive"] }
 dirs = "2.0"
 encoding = "0.2"
 rusqlite = { version = "0.29", features = ["chrono", "bundled"] }
