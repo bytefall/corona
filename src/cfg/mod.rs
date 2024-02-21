@@ -1,3 +1,4 @@
+use serde_derive::Deserialize;
 use std::error::Error;
 use std::path::Path;
 

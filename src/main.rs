@@ -1,8 +1,5 @@
 use clap::Parser;
 
-#[macro_use]
-extern crate serde_derive;
-
 mod cfg;
 mod cli;
 mod core;
